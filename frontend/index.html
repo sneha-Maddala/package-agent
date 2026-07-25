@@ -21,6 +21,7 @@
     color: var(--text);
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 24px;
@@ -33,6 +34,7 @@
     padding: 40px 32px;
     text-align: center;
     border: 1px solid #2a2a2d;
+    margin-bottom: 24px;
   }
   .badge {
     display: inline-block;
@@ -53,40 +55,15 @@
   p.sub {
     color: var(--muted);
     font-size: 15px;
-    margin: 0 0 32px;
+    margin: 0 0 8px;
     line-height: 1.5;
   }
-  #call-btn {
-    background: var(--dhl-red);
-    color: white;
-    border: none;
-    padding: 16px 32px;
-    font-size: 17px;
-    font-weight: 600;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: transform 0.15s ease, opacity 0.15s ease;
-  }
-  #call-btn:hover { opacity: 0.9; }
-  #call-btn:active { transform: scale(0.97); }
-  #call-btn.active { background: #444; }
-  .status {
-    margin-top: 20px;
-    font-size: 14px;
-    color: var(--muted);
-    min-height: 20px;
-  }
   .hint {
-    margin-top: 28px;
+    margin-top: 20px;
     font-size: 13px;
     color: var(--muted);
     border-top: 1px solid #2a2a2d;
-    padding-top: 20px;
-  }
-  .hint code {
-    background: #26262a;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding-top: 16px;
   }
 </style>
 </head>
@@ -96,77 +73,35 @@
   <span class="badge">VOICE-POWERED &middot; REAL DHL DATA</span>
   <h1>Ask your package how it's doing</h1>
   <p class="sub">
-    Say a real DHL tracking number out loud. Your package will tell you where it is,
+    Type or say a real DHL tracking number. Your package will tell you where it is,
     how long it's been sitting there, and — if it's running slow — its best guess why.
   </p>
-
-  <button id="call-btn">🎙️ Talk to your package</button>
-  <div class="status" id="status"></div>
-
   <div class="hint">
     Don't have a tracking number handy? Any real, currently-active DHL shipment number works.
-    Say it clearly, digit by digit.
+    Use the widget in the bottom-right corner to start.
   </div>
 </div>
 
-<script>
-  const VAPI_PUBLIC_KEY = "da25f1d6-a78d-4816-82f2-ed6bb328e975";
-  const VAPI_ASSISTANT_ID = "4df78e49-8523-4c51-9632-03b95b073097";
-
-  const btn = document.getElementById('call-btn');
-  const statusEl = document.getElementById('status');
-  let callActive = false;
-  let vapiInstance = null;
-
-  (function (d, t) {
-    const g = d.createElement(t);
-    const s = d.getElementsByTagName(t)[0];
-    g.src = "https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js";
-    g.defer = true;
-    g.async = true;
-    s.parentNode.insertBefore(g, s);
-    g.onload = function () {
-      vapiInstance = window.vapiSDK.run({
-        apiKey: VAPI_PUBLIC_KEY,
-        assistant: VAPI_ASSISTANT_ID,
-        config: { position: "bottom-right", hidden: true }
-      });
-
-      vapiInstance.on('call-start', () => {
-        callActive = true;
-        btn.textContent = '🔴 End call';
-        btn.classList.add('active');
-        statusEl.textContent = 'Listening... say your tracking number';
-      });
-
-      vapiInstance.on('call-end', () => {
-        callActive = false;
-        btn.textContent = '🎙️ Talk to your package';
-        btn.classList.remove('active');
-        statusEl.textContent = '';
-      });
-
-      vapiInstance.on('speech-start', () => { statusEl.textContent = 'Your package is speaking...'; });
-      vapiInstance.on('speech-end', () => { statusEl.textContent = 'Listening...'; });
-      vapiInstance.on('error', (e) => {
-        console.error(e);
-        statusEl.textContent = 'Something went wrong — try again.';
-      });
-    };
-  })(document, "script");
-
-  btn.addEventListener('click', () => {
-    if (!vapiInstance) {
-      statusEl.textContent = 'Still loading, try again in a second...';
-      return;
-    }
-    if (!callActive) {
-      vapiInstance.start(VAPI_ASSISTANT_ID);
-    } else {
-      vapiInstance.stop();
-    }
-  });
-</script>
+<script src="https://unpkg.com/@vapi-ai/client-sdk-react/dist/embed/widget.umd.js" async type="text/javascript"></script>
+<vapi-widget
+  public-key="da25f1d6-a78d-4816-82f2-ed6bb328e975"
+  assistant-id="4df78e49-8523-4c51-9632-03b95b073097"
+  mode="hybrid"
+  theme="dark"
+  base-bg-color="#1a1a1c"
+  accent-color="#D40511"
+  cta-button-color="#D40511"
+  cta-button-text-color="#ffffff"
+  border-radius="large"
+  size="full"
+  position="bottom-right"
+  title="Package Agent"
+  start-button-text="Talk to your package"
+  end-button-text="End"
+  chat-first-message="Hey, I'm your package. Tell me my tracking number and I'll let you know how I'm doing."
+  chat-placeholder="Type your tracking number..."
+  voice-show-transcript="true"
+></vapi-widget>
 
 </body>
 </html>
