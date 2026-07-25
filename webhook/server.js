@@ -58,7 +58,6 @@ async function getWeather(lat, lon) {
 
 async function isHoliday(countryCode) {
   try {
-    const year = new Date().getFullYear();
     const url = `https://date.nager.at/api/v3/IsTodayPublicHoliday/${countryCode}`;
     const res = await fetch(url);
     return res.status === 200; // 200 = holiday today, 204 = not
@@ -67,7 +66,6 @@ async function isHoliday(countryCode) {
   }
 }
 
-// weather_code 51-67, 80-99 roughly = rain/storm in Open-Meteo's WMO codes
 function isBadWeather(weather) {
   if (!weather) return false;
   const code = weather.weather_code;
@@ -81,8 +79,6 @@ function computeDwellHours(events) {
   return Math.round((now - last) / (1000 * 60 * 60) * 10) / 10;
 }
 
-// Very rough benchmark dwell times per status type, in hours.
-// This is intentionally simple heuristic logic for v1 — no ML needed.
 const DWELL_BENCHMARKS = {
   'transit': 8,
   'pre-transit': 24,
@@ -119,14 +115,12 @@ function buildNarrative({ shipment, dwellHours, weather, holiday, currentLocatio
   return narrative;
 }
 
-// ---------- Route ----------
-// Configured as a Vapi Custom Function / Server URL tool.
-// Vapi POSTs { message: { toolCalls: [ { function: { name, arguments } } ] } }
 app.post('/track', async (req, res) => {
   try {
     const toolCall = req.body?.message?.toolCalls?.[0];
     const trackingNumber = toolCall?.function?.arguments?.trackingNumber
-      || req.body?.trackingNumber; // fallback for direct/manual testing
+      || req.body?.arguments?.trackingNumber
+      || req.body?.trackingNumber;
 
     if (!trackingNumber) {
       return res.status(400).json({ error: 'trackingNumber is required' });
@@ -157,24 +151,27 @@ app.post('/track', async (req, res) => {
 
     const narrative = buildNarrative({ shipment, dwellHours, weather, holiday, currentLocation });
 
-    const result = {
+    res.json({
+      narrative,
+      message: narrative,
       results: [
         {
           toolCallId: toolCall?.id || 'manual-test',
           result: narrative
         }
       ]
-    };
-
-    res.json(result);
+    });
   } catch (err) {
     console.error(err);
     const toolCall = req.body?.message?.toolCalls?.[0];
+    const fallback = `I couldn't find any info on that tracking number — double check it and try again. (${err.message})`;
     res.json({
+      narrative: fallback,
+      message: fallback,
       results: [
         {
           toolCallId: toolCall?.id || 'manual-test',
-          result: `I couldn't find any info on that tracking number — double check it and try again. (${err.message})`
+          result: fallback
         }
       ]
     });
